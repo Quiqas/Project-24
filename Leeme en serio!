@@ -1,0 +1,12 @@
+Probablemente cuando intenten ejecutar el programa la funcion fopen les generara un error, para solucionar esto tendran que hacer lo siguiente:
+
+Van a la pestaña proyecto --> Propiedades de proyecto
+
+Les abrira una ventana
+
+Van a C/C++ --> Procesador --> Definiciones de preprocesador y ya ahi al final de lo que ya esta: WIN32;_DEBUG;_CONSOLE;%(PreprocessorDefinitions)
+agregan esto: ;_CRT_SECURE_NO_DEPRECATE 
+
+Al final debera estar así: WIN32;_DEBUG;_CONSOLE;%(PreprocessorDefinitions);_CRT_SECURE_NO_DEPRECATE 
+
+Y con eso ya no debería aparecer el error.
