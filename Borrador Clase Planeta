@@ -1,0 +1,211 @@
+#include "stdafx.h"
+#include "GL\glut.h"
+#include <stdlib.h>
+#include <math.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <iostream>
+
+char title[] = "Sistema Solar";
+
+GLfloat giro = 0.05;
+GLuint startList;
+GLuint texture = 1;
+
+//Variables para Traslación
+
+double time;
+double timeSpeed;
+double time1;
+double timeSpeed1;
+float Posicion[3];
+float rotation;
+
+using namespace std;
+
+void timer(int) {
+	glutPostRedisplay(); // Actualiza la pantalla
+	glutTimerFunc(10, timer, 0); // Actualiza la Pantalla a 100fps
+}
+
+//Función para cargar texturas, recibe el nombre del archivo.
+GLuint LoadTexture(const char * filename) {
+
+	GLuint texture;
+	int width, height;
+	unsigned char * data;
+	FILE * file;
+
+	file = fopen(filename, "rb");
+
+	if (file == NULL) return 0;
+	width = 1024;
+	height = 512;
+	data = (unsigned char *)malloc(width * height * 3);
+	fread(data, width * height * 3, 1, file);
+	fclose(file);
+
+	for (int i = 0; i < width * height; ++i) {
+		int index = i * 3;
+		unsigned char B, R;
+		B = data[index];
+		R = data[index + 2];
+
+		data[index] = R;
+		data[index + 2] = B;
+	}
+
+  //Hace todos los cambios necesarios para preparar la textura.
+	glGenTextures(1, &texture);
+	glBindTexture(GL_TEXTURE_2D, texture);
+	glTexEnvf(GL_TEXTURE_ENV, GL_TEXTURE_ENV_MODE, GL_MODULATE);
+	glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+	glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+	glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
+	glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
+	gluBuild2DMipmaps(GL_TEXTURE_2D, 4, width, height, GL_RGB, GL_UNSIGNED_BYTE, data);
+	free(data);
+	return texture;
+}
+
+
+void initGL(){
+	glClearColor(0.0f, 0.0f, 0.0f, 1.0f); // Pone el fondo negro
+	glClearDepth(1.0f);                   // Set background depth to farthest
+	glEnable(GL_DEPTH_TEST);   // Activa la profundidad
+	glDepthFunc(GL_LEQUAL);    // Activa el tipo de profundidad a usar
+	glShadeModel(GL_SMOOTH);   // Activa un sombreado suave
+	glHint(GL_PERSPECTIVE_CORRECTION_HINT, GL_NICEST);  // Hace las correciones de perspectiva
+
+	glOrtho(-500.0, 500.0, -500.0, 500.0, 500.0, -500.0); //Define la manta
+	GLUquadricObj *qobj;          //Define el objeto Quadric que es la que genera las esferas
+  
+  //Valores para la iluminacion
+	GLfloat mat_ambient[] = { 0.5, 0.5, 0.5, 1.0 };
+	GLfloat mat_specular[] = { 1.0, 1.0, 1.0, 1.0 };
+	GLfloat mat_shininess[] = { 50.0 };
+	GLfloat light_position[] = { 1.0, 1.0, 1.0, 0.0 };
+	GLfloat model_ambient[] = { 0.5, 0.5, 0.5, 1.0 };
+
+
+	glMaterialfv(GL_FRONT, GL_AMBIENT, mat_ambient);
+	glMaterialfv(GL_FRONT, GL_SPECULAR, mat_specular);
+	glMaterialfv(GL_FRONT, GL_SHININESS, mat_shininess);
+	glLightfv(GL_LIGHT0, GL_POSITION, light_position);
+	glLightModelfv(GL_LIGHT_MODEL_AMBIENT, model_ambient);
+
+  //Activa la iluminacion
+	glEnable(GL_LIGHTING);
+	glEnable(GL_LIGHT0);
+
+	startList = glGenLists(4);    //Crea una Lista de Quadrics
+	qobj = gluNewQuadric();       // Define el objeto Quadric
+
+	gluQuadricDrawStyle(qobj, GLU_FILL); //Define la forma en que sera dibujada la esfera
+	gluQuadricNormals(qobj, GLU_SMOOTH);
+	gluQuadricTexture(qobj, true);        //Genera las coordenadas para la aplicacion de la textura.
+	glNewList(startList, GL_COMPILE);     //Abre la lista en la primera posicion.
+	gluSphere(qobj, 0.5, 30, 30);         //Crea la esfera, el primer parametro es el objeto quadric, el segundo el radio y los demas son los slices
+	glEndList();                          //Cierra la lista
+
+	gluQuadricDrawStyle(qobj, GLU_FILL);
+	gluQuadricNormals(qobj, GLU_SMOOTH);
+	gluQuadricTexture(qobj, true);
+	glNewList(startList + 1, GL_COMPILE);
+	gluSphere(qobj, 0.25, 15, 10);
+	glEndList();
+
+	//Incializo el tiempo 
+	time = 2.552f;
+	timeSpeed = 0.006f;
+	time1 = 2.552f;
+	timeSpeed1 = 0.05f;
+  
+  //Cargo la textura
+	texture = LoadTexture("Earth.bmp"); 
+  //Activo el metodo para actualizar
+	timer(0);
+}
+
+void drawTorus(double, double, int, int);
+
+
+
+
+void calculatePosition(float time,float t) {
+	// Calcula la posicion del planeta
+	float angle = time * 3.1419f / 2;
+
+	Posicion[0] = sin(angle) * 17;
+	Posicion[2] = cos(angle) * 17;
+	Posicion[1] = 0;
+  
+  //Calcula la rotacion del planeta
+	rotation = t * 360 / 1;
+
+}
+
+void display(){
+
+	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT); // Clear color and depth buffers
+	glMatrixMode(GL_MODELVIEW);     // To operate on model-view matrix
+	glLoadIdentity();
+									
+	time += timeSpeed;
+	time1 += timeSpeed1;
+	calculatePosition(time,time1);
+	
+
+	glPushMatrix();             //Guardo en la matriz
+	glEnable(GL_LIGHTING);      //Activo iluminacion
+	glEnable(GL_TEXTURE_2D);    //Activo Texturas
+	glShadeModel(GL_SMOOTH);    
+	glTranslatef(Posicion[0], Posicion[1], Posicion[2]); //Funcion de traslacion
+	glRotatef(rotation, 0.0, 1.0, 0.0);                   //Funcion de rotacion
+	glRotatef(290, 1.0, 0.0, 0.0);                        //Pone en la orientacion correcta al planeta
+	glCallList(startList);                                //Inicia la lista
+	glPopMatrix();                                  //Saca la matriz
+
+	glutSwapBuffers(); 
+}
+
+
+
+void reshape(GLsizei width, GLsizei height)  {
+
+	glOrtho(-500.0, 500.0, -500.0, 500.0, 500.0, -500.0);
+	// Compute aspect ratio of the new window
+	if (height == 0) height = 1;                // To prevent divide by 0
+	GLfloat aspect = (GLfloat)width / (GLfloat)height;
+
+	// Set the viewport to cover the new window
+	glViewport(0, 0, width, height);
+
+	// Set the aspect ratio of the clipping volume to match the viewport
+	glMatrixMode(GL_PROJECTION);  // To operate on the Projection matrix
+	glLoadIdentity();             // Reset
+								  // Enable perspective projection with fovy, aspect, zNear and zFar
+	gluPerspective(100.0f, aspect, 0.1f, 10000.0f);
+}
+
+void specialKeyInput(int key, int x, int y)
+{
+	if (key == GLUT_KEY_LEFT) giro -= 1.0;
+	if (key == GLUT_KEY_RIGHT) giro += 1.0;
+	glutPostRedisplay();
+}
+
+
+int main(int argc, char** argv){
+	glutInit(&argc, argv);            // Initialize GLUT
+	glutInitDisplayMode(GLUT_DOUBLE); // Enable double buffered mode
+	glutInitWindowSize(1024, 720);   // Set the window's initial width & height
+	glutInitWindowPosition(50, 50); // Position the window's initial top-left corner
+	glutCreateWindow(title);          // Create window with the given title
+	glutDisplayFunc(display);       // Register callback handler for window re-paint event
+	glutReshapeFunc(reshape);       // Register callback handler for window re-size event
+	glutSpecialFunc(specialKeyInput);
+	initGL();                       // Our own OpenGL initialization
+	glutMainLoop();                 // Enter the infinite event-processing loop
+	return 0;
+}
